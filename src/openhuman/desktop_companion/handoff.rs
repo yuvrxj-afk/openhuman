@@ -57,9 +57,32 @@ pub fn check_handoff(response_text: &str) -> Vec<HandoffEvent> {
     }
 
     let mut events = Vec::new();
+    // Split response into tokens once for word-boundary matching.
+    let tokens: Vec<&str> = lower
+        .split(|c: char| !c.is_alphanumeric() && c != '-')
+        .filter(|s| !s.is_empty())
+        .collect();
 
     for &(keyword, provider_id) in PROVIDER_KEYWORDS {
-        if !lower.contains(keyword) {
+        // Token-aware match: single-word keywords use exact token match to avoid
+        // substring false positives (e.g. "slacking" won't match "slack").
+        // Multi-word keywords (like "google meet") fall back to substring match.
+        let matched = if keyword.contains(' ') {
+            lower.contains(keyword)
+        } else {
+            tokens.iter().any(|t| *t == keyword)
+        };
+        if !matched {
+            continue;
+        }
+
+        // Deduplicate: skip if we already emitted an event for this provider
+        // (e.g. "email" and "gmail" both map to provider_id "gmail").
+        if events
+            .iter()
+            .any(|e: &HandoffEvent| e.provider == provider_id)
+        {
+            debug!("{LOG_PREFIX} skipping duplicate provider={provider_id} (already matched)");
             continue;
         }
 
@@ -78,16 +101,6 @@ pub fn check_handoff(response_text: &str) -> Vec<HandoffEvent> {
             "{LOG_PREFIX} handoff: keyword='{keyword}' provider={provider_id} matches={}",
             matching.len()
         );
-
-        // Deduplicate: skip if we already emitted an event for this provider
-        // (e.g. "email" and "gmail" both map to provider_id "gmail").
-        if events
-            .iter()
-            .any(|e: &HandoffEvent| e.provider == provider_id)
-        {
-            debug!("{LOG_PREFIX} skipping duplicate provider={provider_id} (already matched)");
-            continue;
-        }
 
         events.push(HandoffEvent {
             provider: provider_id.to_string(),

@@ -208,7 +208,10 @@ pub fn transition_state(
     message: Option<String>,
 ) -> Result<CompanionState, String> {
     let mut guard = ACTIVE_SESSION.lock();
-    let inner = guard.as_mut().ok_or("no active companion session")?;
+    let inner = guard.as_mut().ok_or_else(|| {
+        warn!("{LOG_PREFIX} transition_state called with no active session target={new_state}");
+        "no active companion session".to_string()
+    })?;
 
     let previous = inner.state;
 

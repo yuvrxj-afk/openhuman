@@ -58,7 +58,7 @@ Valid transitions are enforced by `session::is_valid_transition()`. Key paths:
 1. **Activation** — state transitions to Listening (will be driven by Tauri shell hotkey bridge in PR 2)
 2. **STT** — audio samples transcribed via `voice::cloud_transcribe` (Whisper)
 3. **Screen context** — `accessibility::foreground_context()` for app name + window title
-4. **LLM** — chat-completions via `BackendOAuthClient` with system prompt, screen context, and rolling conversation history (capped at 20 turns)
+4. **LLM** — chat-completions via `BackendOAuthClient` with system prompt, screen context, and rolling conversation history (last 20 turns as context)
 5. **Parse response** — extract `[POINT:x,y:label:screenN]` tags via `pointing::parse_and_map()`
 6. **Handoff check** — scan response for provider keywords, match against `provider_surfaces` queue
 7. **TTS** — synthesize speech via `voice::reply_speech` (ElevenLabs)
