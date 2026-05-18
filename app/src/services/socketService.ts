@@ -5,6 +5,8 @@ import { getCoreStateSnapshot } from '../lib/coreState/store';
 import { SocketIOMCPTransportImpl } from '../lib/mcp';
 import { store } from '../store';
 import { upsertChannelConnection } from '../store/channelConnectionsSlice';
+import { setCompanionState } from '../store/companionSlice';
+import type { CompanionStateChangedEvent } from '../store/companionSlice';
 import { setBackend } from '../store/connectivitySlice';
 import { resetForUser, setSocketIdForUser, setStatusForUser } from '../store/socketSlice';
 import type { ChannelAuthMode, ChannelConnectionStatus, ChannelType } from '../types/channels';
@@ -287,6 +289,16 @@ class SocketService {
           patch: { status: 'connected', lastError: undefined, capabilities: ['dm'] },
         })
       );
+    });
+
+    // Companion state change events — dispatch into the companion Redux slice
+    // so settings panel and other UI can react to session lifecycle.
+    this.socket.on('companion:state_changed', (data: unknown) => {
+      const event = data as CompanionStateChangedEvent;
+      if (event && typeof event === 'object' && 'state' in event) {
+        socketLog('companion:state_changed → %s', event.state);
+        store.dispatch(setCompanionState(event));
+      }
     });
 
     this.socket.connect();

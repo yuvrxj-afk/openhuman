@@ -58,7 +58,7 @@ let lastPollDebugTs = 0;
 
 // ── State model ──────────────────────────────────────────────────────────
 
-type OverlayMode = 'idle' | 'stt' | 'attention';
+type OverlayMode = 'idle' | 'stt' | 'attention' | 'companion';
 type BubbleTone = 'neutral' | 'accent' | 'success';
 
 interface OverlayBubble {
@@ -86,6 +86,29 @@ interface OverlayAttentionPayload {
   tone?: BubbleTone;
   ttl_ms?: number;
   source?: string;
+}
+
+interface CompanionStateChangedPayload {
+  session_id?: string;
+  state?: string;
+  previous_state?: string;
+  message?: string;
+}
+
+/** Convert companion state to a user-friendly label for the bubble. */
+function companionStateLabel(state: string): string {
+  switch (state) {
+    case 'listening':
+      return '\u201CListening\u2026\u201D';
+    case 'thinking':
+      return '\u201CThinking\u2026\u201D';
+    case 'speaking':
+      return '\u201CSpeaking\u2026\u201D';
+    case 'pointing':
+      return '\u201CPointing\u2026\u201D';
+    default:
+      return `\u201C${state}\u201D`;
+  }
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -275,6 +298,40 @@ export default function OverlayApp() {
     [scheduleDismiss]
   );
 
+  // ── Companion state changes ──────────────────────────────────────────────
+  const handleCompanionStateChanged = useCallback(
+    (payload: CompanionStateChangedPayload) => {
+      const state = payload?.state ?? 'idle';
+      console.debug(`[overlay] companion:state_changed state=${state}`);
+
+      if (state === 'idle') {
+        scheduleDismiss(0);
+        return;
+      }
+      if (state === 'error') {
+        setMode('companion');
+        setBubble({
+          id: `companion-error-${Date.now()}`,
+          text: payload?.message ? `"${payload.message}"` : '\u201CError\u201D',
+          tone: 'neutral',
+          compact: true,
+        });
+        scheduleDismiss(DEFAULT_ATTENTION_TTL_MS);
+        return;
+      }
+
+      clearDismissTimer();
+      setMode('companion');
+      setBubble({
+        id: `companion-${state}-${Date.now()}`,
+        text: companionStateLabel(state),
+        tone: state === 'speaking' ? 'success' : 'accent',
+        compact: true,
+      });
+    },
+    [clearDismissTimer, scheduleDismiss]
+  );
+
   // ── Socket.IO subscription lifecycle ───────────────────────────────────
   useEffect(() => {
     let socket: Socket | null = null;
@@ -314,6 +371,7 @@ export default function OverlayApp() {
         socket.on('dictation:toggle', handleDictationToggle);
         socket.on('dictation:transcription', handleDictationTranscription);
         socket.on('overlay:attention', handleAttention);
+        socket.on('companion:state_changed', handleCompanionStateChanged);
 
         socket.connect();
       } catch (err) {
@@ -331,7 +389,13 @@ export default function OverlayApp() {
       }
       clearDismissTimer();
     };
-  }, [clearDismissTimer, handleAttention, handleDictationToggle, handleDictationTranscription]);
+  }, [
+    clearDismissTimer,
+    handleAttention,
+    handleCompanionStateChanged,
+    handleDictationToggle,
+    handleDictationTranscription,
+  ]);
 
   // ── Poll voice server status as fallback sync ─────────────────────────
   // Socket events are the primary state driver, but if an event is missed
@@ -621,7 +685,9 @@ export default function OverlayApp() {
                 ? t('overlay.ariaVoiceActive')
                 : mode === 'attention'
                   ? t('overlay.ariaAttention')
-                  : t('overlay.ariaOrb')
+                  : mode === 'companion'
+                    ? 'Companion active'
+                    : t('overlay.ariaOrb')
             }
             onMouseDown={handleDragStart}
             onMouseMove={handleMouseMove}
