@@ -78,6 +78,7 @@ fn cancelled_result_has_correct_fields() {
     assert!(r.response_text.is_empty());
     assert!(r.targets.is_empty());
     assert!(!r.tts_synthesized);
+    assert!(r.handoff_events.is_empty());
     assert!(r.cancelled);
 }
 

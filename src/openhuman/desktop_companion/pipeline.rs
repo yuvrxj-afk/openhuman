@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tokio_util::sync::CancellationToken;
 
+use super::handoff::{self, HandoffEvent};
 use super::pointing::{self, PointTarget, PointingParseResult, ScreenGeometry};
 use super::session;
 use super::types::*;
@@ -43,6 +44,8 @@ pub struct TurnResult {
     pub targets: Vec<PointTarget>,
     /// Whether TTS audio was synthesized and enqueued.
     pub tts_synthesized: bool,
+    /// Provider-surface handoff events detected in the response.
+    pub handoff_events: Vec<HandoffEvent>,
     /// Whether the turn was cancelled before completion.
     pub cancelled: bool,
 }
@@ -106,6 +109,12 @@ pub async fn run_text_turn(
         targets.len()
     );
 
+    // Check for provider-surface handoff opportunities.
+    let handoff_events = handoff::check_handoff(&clean_text);
+    if !handoff_events.is_empty() {
+        debug!("{LOG_PREFIX} handoff events={}", handoff_events.len());
+    }
+
     // Record conversation turns.
     let now_ms = chrono::Utc::now().timestamp_millis();
     let _ = session::push_conversation_turn(ConversationTurn {
@@ -155,6 +164,7 @@ pub async fn run_text_turn(
         response_text: clean_text,
         targets,
         tts_synthesized: tts_ok,
+        handoff_events,
         cancelled: false,
     };
 
@@ -190,6 +200,7 @@ pub async fn run_audio_turn(
                 response_text: String::new(),
                 targets: Vec::new(),
                 tts_synthesized: false,
+                handoff_events: Vec::new(),
                 cancelled: false,
             });
         }
@@ -378,6 +389,7 @@ fn cancelled_result(transcript: &str) -> TurnResult {
         response_text: String::new(),
         targets: Vec::new(),
         tts_synthesized: false,
+        handoff_events: Vec::new(),
         cancelled: true,
     }
 }
