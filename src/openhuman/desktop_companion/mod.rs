@@ -14,6 +14,7 @@
 //! `pipeline.rs`, and `pointing.rs`.
 
 pub mod bus;
+pub mod pointing;
 pub mod schemas;
 pub mod session;
 pub mod types;
