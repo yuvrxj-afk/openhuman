@@ -48,7 +48,6 @@ pub fn check_handoff(response_text: &str) -> Vec<HandoffEvent> {
         return Vec::new();
     }
 
-    let lower = response_text.to_lowercase();
     let queue_items = store::list_queue_items();
 
     if queue_items.is_empty() {
@@ -56,7 +55,19 @@ pub fn check_handoff(response_text: &str) -> Vec<HandoffEvent> {
         return Vec::new();
     }
 
+    check_handoff_with_items(response_text, &queue_items)
+}
+
+/// Pure matching logic: match provider keywords against response text and the
+/// given queue items. Extracted so tests can exercise the positive path without
+/// depending on global store state.
+pub(crate) fn check_handoff_with_items(
+    response_text: &str,
+    queue_items: &[RespondQueueItem],
+) -> Vec<HandoffEvent> {
+    let lower = response_text.to_lowercase();
     let mut events = Vec::new();
+
     // Split response into tokens once for word-boundary matching.
     let tokens: Vec<&str> = lower
         .split(|c: char| !c.is_alphanumeric() && c != '-')
@@ -116,6 +127,25 @@ pub fn check_handoff(response_text: &str) -> Vec<HandoffEvent> {
 mod tests {
     use super::*;
 
+    fn make_queue_item(provider: &str) -> RespondQueueItem {
+        RespondQueueItem {
+            id: "test-id".into(),
+            provider: provider.into(),
+            account_id: "acct".into(),
+            event_kind: "message".into(),
+            entity_id: "ent".into(),
+            thread_id: None,
+            title: None,
+            snippet: None,
+            sender_name: None,
+            sender_handle: None,
+            timestamp: "2026-01-01T00:00:00Z".into(),
+            deep_link: None,
+            requires_attention: true,
+            status: String::new(),
+        }
+    }
+
     #[test]
     fn check_handoff_empty_response() {
         assert!(check_handoff("").is_empty());
@@ -135,6 +165,40 @@ mod tests {
     }
 
     #[test]
+    fn check_handoff_with_items_emits_event() {
+        let items = vec![make_queue_item("slack")];
+        let events = check_handoff_with_items("Reply to the Slack message", &items);
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].provider, "slack");
+        assert_eq!(events[0].matching_items.len(), 1);
+    }
+
+    #[test]
+    fn check_handoff_with_items_deduplicates_gmail() {
+        // "email" and "gmail" both map to provider_id "gmail" — should emit once.
+        let items = vec![make_queue_item("gmail")];
+        let events = check_handoff_with_items("Forward the email from Gmail to the team", &items);
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].provider, "gmail");
+    }
+
+    #[test]
+    fn check_handoff_with_items_no_substring_false_positive() {
+        // "slacking" should NOT match "slack".
+        let items = vec![make_queue_item("slack")];
+        let events = check_handoff_with_items("Stop slacking off", &items);
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn check_handoff_with_items_multi_word_keyword() {
+        let items = vec![make_queue_item("google-meet")];
+        let events = check_handoff_with_items("Join the Google Meet call", &items);
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].provider, "google-meet");
+    }
+
+    #[test]
     fn provider_keywords_cover_known_providers() {
         let providers: Vec<&str> = PROVIDER_KEYWORDS.iter().map(|(_, p)| *p).collect();
         assert!(providers.contains(&"slack"));
@@ -146,8 +210,10 @@ mod tests {
 
     #[test]
     fn provider_keywords_case_insensitive_match() {
-        let text = "Check your SLACK messages";
-        let lower = text.to_lowercase();
-        assert!(PROVIDER_KEYWORDS.iter().any(|(kw, _)| lower.contains(kw)));
+        // Route through production matcher to verify case handling.
+        let items = vec![make_queue_item("slack")];
+        let events = check_handoff_with_items("Check your SLACK messages", &items);
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].provider, "slack");
     }
 }
