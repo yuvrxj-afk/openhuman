@@ -52,7 +52,11 @@ pub struct TurnResult {
 
 /// Run a text-input companion turn (no STT needed — the user typed their query).
 ///
-/// Transitions: Thinking → Speaking/Pointing → Idle.
+/// **Precondition**: the session must already be in `Listening` state. The
+/// caller (e.g. Tauri hotkey bridge or `companion_activate` RPC) is
+/// responsible for the `Idle → Listening` transition before invoking this.
+///
+/// Transitions: Listening → Thinking → Speaking/Pointing → Idle.
 pub async fn run_text_turn(
     text: &str,
     screens: &[ScreenGeometry],
@@ -173,6 +177,10 @@ pub async fn run_text_turn(
 }
 
 /// Run a full audio-input companion turn: STT → screen context → LLM → TTS → pointing.
+///
+/// **Precondition**: the session must already be in `Listening` state. The
+/// caller (e.g. Tauri hotkey bridge or `companion_activate` RPC) is
+/// responsible for the `Idle → Listening` transition before invoking this.
 ///
 /// Transitions: Listening → Thinking → Speaking/Pointing → Idle.
 pub async fn run_audio_turn(

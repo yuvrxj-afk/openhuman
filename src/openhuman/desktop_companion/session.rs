@@ -150,19 +150,33 @@ pub fn stop_session(
 
 /// Get the current session status.
 pub fn session_status() -> CompanionSessionStatus {
-    let guard = ACTIVE_SESSION.lock();
+    let mut guard = ACTIVE_SESSION.lock();
     match guard.as_ref() {
         Some(inner) => {
             let now_ms = chrono::Utc::now().timestamp_millis();
             let remaining_ms = inner.expires_at_ms.map(|exp| (exp - now_ms).max(0));
 
             // Auto-expire if TTL exceeded.
+            // Clear inline (guard.take) instead of calling stop_session() to
+            // avoid a TOCTOU race where another thread starts a new session
+            // between drop(guard) and the stop_session() call.
             if let Some(remaining) = remaining_ms {
                 if remaining == 0 {
+                    let stale = guard.take().expect("checked is_some");
+                    let stale_id = stale.id.clone();
+                    let turn_count = stale.conversation.len();
+                    drop(stale);
                     drop(guard);
-                    let _ = stop_session(&StopCompanionSessionParams {
-                        reason: Some("ttl_expired".into()),
-                    });
+                    info!(
+                        "{LOG_PREFIX} auto-expiring stale session id={stale_id} turns={turn_count}"
+                    );
+                    let _ = crate::core::event_bus::publish_global(
+                        crate::core::event_bus::DomainEvent::CompanionSessionEnded {
+                            session_id: stale_id,
+                            reason: "ttl_expired".into(),
+                            turn_count,
+                        },
+                    );
                     return CompanionSessionStatus {
                         active: false,
                         state: CompanionState::Idle,
