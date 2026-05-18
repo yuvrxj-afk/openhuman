@@ -48,17 +48,25 @@ mod tests {
 
     #[tokio::test]
     async fn publish_is_received_by_subscriber() {
+        // STATE_BUS is process-global — other tests may publish events.
+        // We filter by session_id to avoid flakiness.
         let mut rx = subscribe_state_changed();
         let delivered = publish_state_changed(CompanionStateChangedEvent {
-            session_id: "test-session".into(),
+            session_id: "bus-test-unique".into(),
             state: CompanionState::Listening,
             previous_state: CompanionState::Idle,
             message: None,
         });
         assert!(delivered >= 1);
-        let event = rx.recv().await.expect("event delivered");
-        assert_eq!(event.state, CompanionState::Listening);
-        assert_eq!(event.previous_state, CompanionState::Idle);
+        // Drain until we find our specific event (others may have been published concurrently).
+        loop {
+            let event = rx.recv().await.expect("event delivered");
+            if event.session_id == "bus-test-unique" {
+                assert_eq!(event.state, CompanionState::Listening);
+                assert_eq!(event.previous_state, CompanionState::Idle);
+                break;
+            }
+        }
     }
 
     #[test]

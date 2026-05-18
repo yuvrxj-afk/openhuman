@@ -5987,6 +5987,16 @@ async fn companion_session_lifecycle_over_rpc() {
         "config should have hotkey: {config_body}"
     );
 
+    // ── 6b. Config set → error (not yet persisted) ──
+    let config_set = post_json_rpc(
+        &rpc_base,
+        116,
+        "openhuman.companion_config_set",
+        json!({ "hotkey": "CmdOrCtrl+Shift+H" }),
+    )
+    .await;
+    assert_jsonrpc_error(&config_set, "companion_config_set (not persisted)");
+
     // ── 7. Stop session ──
     let stop = post_json_rpc(
         &rpc_base,

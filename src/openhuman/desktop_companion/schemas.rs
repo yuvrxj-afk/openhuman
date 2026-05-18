@@ -3,6 +3,7 @@
 //! Exposes the companion session lifecycle over JSON-RPC so the Tauri
 //! shell and frontend can drive the desktop companion loop.
 
+use log::{debug, warn};
 use serde::de::DeserializeOwned;
 use serde_json::{Map, Value};
 
@@ -12,6 +13,8 @@ use crate::openhuman::memory::EmptyRequest;
 
 use super::session;
 use super::types::*;
+
+const LOG_PREFIX: &str = "[companion_rpc]";
 
 pub fn all_desktop_companion_controller_schemas() -> Vec<ControllerSchema> {
     vec![
@@ -146,38 +149,56 @@ pub fn schemas(function: &str) -> ControllerSchema {
 
 fn handle_start_session(params: Map<String, Value>) -> crate::core::all::ControllerFuture {
     Box::pin(async move {
+        debug!("{LOG_PREFIX} start_session entry");
         let req: StartCompanionSessionParams = parse_params(params)?;
-        let result = session::start_session(&req)?;
+        let result = session::start_session(&req).map_err(|e| {
+            warn!("{LOG_PREFIX} start_session failed: {e}");
+            e
+        })?;
+        debug!(
+            "{LOG_PREFIX} start_session done session_id={}",
+            result.session_id
+        );
         serde_json::to_value(result).map_err(|e| format!("serialize error: {e}"))
     })
 }
 
 fn handle_stop_session(params: Map<String, Value>) -> crate::core::all::ControllerFuture {
     Box::pin(async move {
+        debug!("{LOG_PREFIX} stop_session entry");
         let req: StopCompanionSessionParams = parse_params(params)?;
-        let result = session::stop_session(&req)?;
+        let result = session::stop_session(&req).map_err(|e| {
+            warn!("{LOG_PREFIX} stop_session failed: {e}");
+            e
+        })?;
+        debug!("{LOG_PREFIX} stop_session done stopped={}", result.stopped);
         serde_json::to_value(result).map_err(|e| format!("serialize error: {e}"))
     })
 }
 
 fn handle_status(params: Map<String, Value>) -> crate::core::all::ControllerFuture {
     Box::pin(async move {
+        debug!("{LOG_PREFIX} status entry");
         let _: EmptyRequest = parse_params(params)?;
         let result = session::session_status();
+        debug!("{LOG_PREFIX} status done active={}", result.active);
         serde_json::to_value(result).map_err(|e| format!("serialize error: {e}"))
     })
 }
 
 fn handle_config_get(params: Map<String, Value>) -> crate::core::all::ControllerFuture {
     Box::pin(async move {
+        debug!("{LOG_PREFIX} config_get entry");
         let _: EmptyRequest = parse_params(params)?;
         let config = CompanionConfig::default();
+        debug!("{LOG_PREFIX} config_get done");
         serde_json::to_value(config).map_err(|e| format!("serialize error: {e}"))
     })
 }
 
 fn handle_config_set(_params: Map<String, Value>) -> crate::core::all::ControllerFuture {
     Box::pin(async move {
+        warn!("{LOG_PREFIX} config_set called but persistence is not yet implemented");
         Err("companion config_set is not yet persisted — changes are not saved".to_string())
     })
 }

@@ -45,16 +45,30 @@ pub fn start_session(
     }
 
     let mut guard = ACTIVE_SESSION.lock();
-    if guard.is_some() {
-        return Err("a companion session is already active — stop it first".into());
+    if let Some(ref inner) = *guard {
+        // Auto-expire stale sessions so callers don't have to poll status() first.
+        let now_ms = chrono::Utc::now().timestamp_millis();
+        let expired = inner
+            .expires_at_ms
+            .map(|exp| now_ms >= exp)
+            .unwrap_or(false);
+        if expired {
+            let stale_id = inner.id.clone();
+            info!("{LOG_PREFIX} auto-expiring stale session id={stale_id} during start_session");
+            let _ = guard.take();
+        } else {
+            return Err("a companion session is already active — stop it first".into());
+        }
     }
 
     let now_ms = chrono::Utc::now().timestamp_millis();
     let ttl_secs = params
         .ttl_secs
         .unwrap_or(CompanionConfig::default().ttl_secs);
-    let expires_at_ms = if ttl_secs > 0 {
-        Some(now_ms + (ttl_secs as i64 * 1000))
+    // Guard against u64→i64 overflow: cap at ~292 million years in seconds.
+    let safe_ttl = ttl_secs.min(i64::MAX as u64 / 1000);
+    let expires_at_ms = if safe_ttl > 0 {
+        Some(now_ms + (safe_ttl as i64 * 1000))
     } else {
         None
     };
@@ -200,6 +214,10 @@ pub fn transition_state(
 
     // Validate transitions.
     if !is_valid_transition(previous, new_state) {
+        warn!(
+            "{LOG_PREFIX} rejected state transition: {} -> {} session={}",
+            previous, new_state, inner.id
+        );
         return Err(format!(
             "invalid companion state transition: {} -> {}",
             previous, new_state

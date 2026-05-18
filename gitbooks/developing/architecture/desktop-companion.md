@@ -20,7 +20,7 @@ The desktop companion orchestrates a Clicky-style interaction loop: hotkey activ
 
 ## Module layout
 
-```
+```text
 src/openhuman/desktop_companion/
   mod.rs          — module exports (light)
   types.rs        — CompanionState enum, CompanionConfig, ConversationTurn, session param/result types
@@ -34,7 +34,7 @@ src/openhuman/desktop_companion/
 
 ## State machine
 
-```
+```text
 Idle -> Listening -> Thinking -> Speaking -> Pointing -> Idle
                                     |           |
                                     v           v
@@ -55,7 +55,7 @@ Valid transitions are enforced by `session::is_valid_transition()`. Key paths:
 
 `pipeline.rs` orchestrates a single turn:
 
-1. **Activation** — state transitions to Listening (driven by Tauri hotkey bridge)
+1. **Activation** — state transitions to Listening (will be driven by Tauri shell hotkey bridge in PR 2)
 2. **STT** — audio samples transcribed via `voice::cloud_transcribe` (Whisper)
 3. **Screen context** — `accessibility::foreground_context()` for app name + window title
 4. **LLM** — chat-completions via `BackendOAuthClient` with system prompt, screen context, and rolling conversation history (capped at 20 turns)

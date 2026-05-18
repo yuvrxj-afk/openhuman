@@ -444,6 +444,9 @@ pub fn namespace_description(namespace: &str) -> Option<&'static str> {
         "whatsapp_data" => Some(
             "Structured WhatsApp conversation and message store — list chats, read messages, and search across WhatsApp Web data.",
         ),
+        "companion" => Some(
+            "Desktop companion — Clicky-style hotkey-driven interaction loop with STT, LLM, TTS, and visual pointing.",
+        ),
         _ => None,
     }
 }

@@ -79,6 +79,16 @@ pub fn check_handoff(response_text: &str) -> Vec<HandoffEvent> {
             matching.len()
         );
 
+        // Deduplicate: skip if we already emitted an event for this provider
+        // (e.g. "email" and "gmail" both map to provider_id "gmail").
+        if events
+            .iter()
+            .any(|e: &HandoffEvent| e.provider == provider_id)
+        {
+            debug!("{LOG_PREFIX} skipping duplicate provider={provider_id} (already matched)");
+            continue;
+        }
+
         events.push(HandoffEvent {
             provider: provider_id.to_string(),
             matching_items: matching,

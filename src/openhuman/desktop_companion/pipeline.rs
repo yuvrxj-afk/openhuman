@@ -190,6 +190,11 @@ pub async fn run_audio_turn(
         audio_samples.len()
     );
 
+    // Check cancellation before expensive STT call.
+    if cancel.is_cancelled() {
+        return Ok(cancelled_result(""));
+    }
+
     // STT.
     let transcript = match stt(audio_samples, sample_rate).await {
         Ok(text) if text.trim().is_empty() => {
@@ -384,6 +389,9 @@ fn tail_history(history: &[ConversationTurn], n: usize) -> Vec<&ConversationTurn
 }
 
 fn cancelled_result(transcript: &str) -> TurnResult {
+    // Restore session to Idle so it doesn't stay stuck in Thinking/Speaking.
+    let _ = session::transition_state(CompanionState::Idle, None);
+    info!("{LOG_PREFIX} turn cancelled, restored session to Idle");
     TurnResult {
         transcript: transcript.to_string(),
         response_text: String::new(),
