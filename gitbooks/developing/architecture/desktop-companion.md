@@ -125,5 +125,5 @@ Platform-specific code is gated with `#[cfg(target_os = "macos")]`.
 | `pipeline_tests.rs` | Turn orchestration, cancellation, input validation, system prompt |
 | `pointing_tests.rs` | Tag parsing, coordinate mapping, multi-monitor, edge cases |
 | `handoff.rs` (inline) | Keyword matching, empty queue, provider coverage |
-| `schemas_tests.rs` | Controller count, schema field validation |
+| `schemas.rs` (inline) | Controller count, schema field validation |
 | `tests/json_rpc_e2e.rs` | Full RPC round-trip: start -> status -> config -> stop |

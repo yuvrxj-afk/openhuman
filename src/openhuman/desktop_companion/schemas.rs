@@ -176,13 +176,9 @@ fn handle_config_get(params: Map<String, Value>) -> crate::core::all::Controller
     })
 }
 
-fn handle_config_set(params: Map<String, Value>) -> crate::core::all::ControllerFuture {
+fn handle_config_set(_params: Map<String, Value>) -> crate::core::all::ControllerFuture {
     Box::pin(async move {
-        let _partial: Value = Value::Object(params);
-        // For now, return the default config. Full persistence will follow
-        // when the config domain integration lands.
-        let config = CompanionConfig::default();
-        serde_json::to_value(config).map_err(|e| format!("serialize error: {e}"))
+        Err("companion config_set is not yet persisted — changes are not saved".to_string())
     })
 }
 

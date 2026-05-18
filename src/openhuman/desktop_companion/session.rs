@@ -7,8 +7,6 @@
 //! Only one session may be active at a time. Sessions are created with
 //! explicit user consent and can be stopped manually or via TTL expiry.
 
-use std::sync::atomic::{AtomicBool, Ordering};
-
 use log::{debug, info, warn};
 use parking_lot::Mutex;
 
@@ -21,10 +19,8 @@ const LOG_PREFIX: &str = "[desktop_companion]";
 const MAX_CONVERSATION_TURNS: usize = 50;
 
 /// Process-global singleton for the active companion session.
+/// The `Mutex` serializes all session operations — no separate lock needed.
 static ACTIVE_SESSION: Mutex<Option<CompanionSessionInner>> = Mutex::new(None);
-
-/// Flag to prevent re-entrant session operations.
-static SESSION_LOCK: AtomicBool = AtomicBool::new(false);
 
 /// Internal mutable session state (not serialized directly).
 struct CompanionSessionInner {
@@ -48,52 +44,52 @@ pub fn start_session(
         return Err("user consent is required to start a companion session".into());
     }
 
-    if SESSION_LOCK.swap(true, Ordering::SeqCst) {
-        return Err("companion session operation already in progress".into());
+    let mut guard = ACTIVE_SESSION.lock();
+    if guard.is_some() {
+        return Err("a companion session is already active — stop it first".into());
     }
 
-    let result = {
-        let mut guard = ACTIVE_SESSION.lock();
-        if guard.is_some() {
-            Err("a companion session is already active — stop it first".into())
-        } else {
-            let now_ms = chrono::Utc::now().timestamp_millis();
-            let ttl_secs = params
-                .ttl_secs
-                .unwrap_or(CompanionConfig::default().ttl_secs);
-            let expires_at_ms = if ttl_secs > 0 {
-                Some(now_ms + (ttl_secs as i64 * 1000))
-            } else {
-                None
-            };
-            let session_id = uuid::Uuid::new_v4().to_string();
-
-            info!(
-                "{LOG_PREFIX} starting session id={} ttl_secs={} expires_at_ms={:?}",
-                session_id, ttl_secs, expires_at_ms
-            );
-
-            let inner = CompanionSessionInner {
-                id: session_id.clone(),
-                state: CompanionState::Idle,
-                started_at_ms: now_ms,
-                expires_at_ms,
-                ttl_secs,
-                conversation: Vec::new(),
-                last_error: None,
-            };
-            *guard = Some(inner);
-
-            Ok(StartCompanionSessionResult {
-                session_id,
-                state: CompanionState::Idle,
-                expires_at_ms,
-            })
-        }
+    let now_ms = chrono::Utc::now().timestamp_millis();
+    let ttl_secs = params
+        .ttl_secs
+        .unwrap_or(CompanionConfig::default().ttl_secs);
+    let expires_at_ms = if ttl_secs > 0 {
+        Some(now_ms + (ttl_secs as i64 * 1000))
+    } else {
+        None
     };
+    let session_id = uuid::Uuid::new_v4().to_string();
 
-    SESSION_LOCK.store(false, Ordering::SeqCst);
-    result
+    info!(
+        "{LOG_PREFIX} starting session id={} ttl_secs={} expires_at_ms={:?}",
+        session_id, ttl_secs, expires_at_ms
+    );
+
+    let inner = CompanionSessionInner {
+        id: session_id.clone(),
+        state: CompanionState::Idle,
+        started_at_ms: now_ms,
+        expires_at_ms,
+        ttl_secs,
+        conversation: Vec::new(),
+        last_error: None,
+    };
+    *guard = Some(inner);
+    drop(guard);
+
+    // Publish session-started event for Socket.IO bridge / subscribers.
+    let _ = crate::core::event_bus::publish_global(
+        crate::core::event_bus::DomainEvent::CompanionSessionStarted {
+            session_id: session_id.clone(),
+            ttl_secs,
+        },
+    );
+
+    Ok(StartCompanionSessionResult {
+        session_id,
+        state: CompanionState::Idle,
+        expires_at_ms,
+    })
 }
 
 /// Stop the active companion session.
@@ -107,12 +103,21 @@ pub fn stop_session(
                 .reason
                 .clone()
                 .unwrap_or_else(|| "user_requested".into());
+            let session_id = inner.id.clone();
+            let turn_count = inner.conversation.len();
             info!(
-                "{LOG_PREFIX} stopping session id={} reason={} turns={}",
-                inner.id,
-                reason,
-                inner.conversation.len()
+                "{LOG_PREFIX} stopping session id={session_id} reason={reason} turns={turn_count}",
             );
+            drop(guard);
+
+            let _ = crate::core::event_bus::publish_global(
+                crate::core::event_bus::DomainEvent::CompanionSessionEnded {
+                    session_id,
+                    reason: reason.clone(),
+                    turn_count,
+                },
+            );
+
             Ok(StopCompanionSessionResult {
                 stopped: true,
                 reason: Some(reason),
@@ -293,7 +298,6 @@ fn is_valid_transition(from: CompanionState, to: CompanionState) -> bool {
 /// Reset the global session state. Used only in tests.
 #[cfg(test)]
 pub(crate) fn reset_for_test() {
-    SESSION_LOCK.store(false, Ordering::SeqCst);
     let mut guard = ACTIVE_SESSION.lock();
     *guard = None;
 }

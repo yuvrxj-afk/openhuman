@@ -51,12 +51,19 @@ pub struct PointingParseResult {
     pub clean_text: String,
 }
 
+/// Lazily compiled POINT-tag regex.
+fn point_tag_regex() -> &'static regex::Regex {
+    static RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    RE.get_or_init(|| {
+        regex::Regex::new(r"\[POINT:(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?):([^:\]]+):screen(\d+)\]")
+            .expect("companion POINT tag regex is static and valid")
+    })
+}
+
 /// Parse `[POINT:x,y:label:screenN]` tags from LLM response text and map
 /// coordinates to absolute desktop positions using the given screen geometry.
 pub fn parse_and_map(text: &str, screens: &[ScreenGeometry]) -> PointingParseResult {
-    let re =
-        regex::Regex::new(r"\[POINT:(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?):([^:\]]+):screen(\d+)\]")
-            .expect("static regex");
+    let re = point_tag_regex();
 
     let mut targets = Vec::new();
     let clean_text = re

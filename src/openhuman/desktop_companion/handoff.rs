@@ -28,7 +28,6 @@ const PROVIDER_KEYWORDS: &[(&str, &str)] = &[
     ("email", "gmail"),
     ("gmail", "gmail"),
     ("google meet", "google-meet"),
-    ("meet", "google-meet"),
 ];
 
 /// A handoff event emitted when the companion identifies a provider action.
