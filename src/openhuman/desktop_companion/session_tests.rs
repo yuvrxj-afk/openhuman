@@ -319,6 +319,55 @@ fn push_turn_fails_without_session() {
     });
 }
 
+// ── Auto-expire and TTL edge cases ───────────────────────────────────
+
+#[test]
+fn start_session_auto_expires_stale_session() {
+    with_clean_session(|| {
+        // Start a session with a 1-second TTL.
+        let first = start_session(&StartCompanionSessionParams {
+            consent: true,
+            ttl_secs: Some(1),
+        })
+        .unwrap();
+        assert!(first.expires_at_ms.is_some());
+
+        // Sleep past the TTL so the session becomes stale.
+        std::thread::sleep(std::time::Duration::from_millis(1100));
+
+        // Starting a new session should succeed — the stale one is auto-expired.
+        let second = start_session(&StartCompanionSessionParams {
+            consent: true,
+            ttl_secs: Some(3600),
+        })
+        .unwrap();
+        assert_ne!(first.session_id, second.session_id);
+        assert_eq!(second.state, CompanionState::Idle);
+    });
+}
+
+#[test]
+fn start_session_ttl_overflow_guard() {
+    with_clean_session(|| {
+        // u64::MAX would overflow i64 when multiplied by 1000 — the guard caps it.
+        let result = start_session(&StartCompanionSessionParams {
+            consent: true,
+            ttl_secs: Some(u64::MAX),
+        })
+        .unwrap();
+        // Session created without panic.
+        assert!(!result.session_id.is_empty());
+        // expires_at_ms should be set (non-zero TTL) and positive (not overflowed).
+        let expires = result
+            .expires_at_ms
+            .expect("should have expiry with non-zero TTL");
+        assert!(
+            expires > 0,
+            "expires_at_ms should be positive, got {expires}"
+        );
+    });
+}
+
 // ── is_active helper ──────────────────────────────────────────────────
 
 #[test]

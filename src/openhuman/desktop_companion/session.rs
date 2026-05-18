@@ -65,10 +65,11 @@ pub fn start_session(
     let ttl_secs = params
         .ttl_secs
         .unwrap_or(CompanionConfig::default().ttl_secs);
-    // Guard against u64→i64 overflow: cap at ~292 million years in seconds.
-    let safe_ttl = ttl_secs.min(i64::MAX as u64 / 1000);
-    let expires_at_ms = if safe_ttl > 0 {
-        Some(now_ms + (safe_ttl as i64 * 1000))
+    // Guard against overflow: cap so that now_ms + ttl_ms never exceeds i64::MAX.
+    let max_ttl_ms = (i64::MAX - now_ms) as u64;
+    let ttl_ms = ttl_secs.saturating_mul(1000).min(max_ttl_ms);
+    let expires_at_ms = if ttl_secs > 0 {
+        Some(now_ms + ttl_ms as i64)
     } else {
         None
     };
