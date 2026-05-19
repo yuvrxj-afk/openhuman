@@ -102,7 +102,7 @@ const COMPANION_STATES: ReadonlySet<string> = new Set([
   'error',
 ]);
 
-function parseCompanionStateChangedEvent(value: unknown): CompanionStateChangedEvent | null {
+export function parseCompanionStateChangedEvent(value: unknown): CompanionStateChangedEvent | null {
   if (!value || typeof value !== 'object') return null;
   const obj = value as Record<string, unknown>;
   if (typeof obj.session_id !== 'string') return null;

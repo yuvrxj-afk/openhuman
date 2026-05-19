@@ -96,7 +96,7 @@ interface CompanionStateChangedPayload {
 }
 
 /** Convert companion state to a user-friendly label for the bubble. */
-function companionStateLabel(state: string): string {
+export function companionStateLabel(state: string): string {
   switch (state) {
     case 'listening':
       return '\u201CListening\u2026\u201D';

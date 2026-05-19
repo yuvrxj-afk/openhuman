@@ -139,4 +139,90 @@ describe('CompanionPanel', () => {
       );
     });
   });
+
+  it('shows error when companion_status fetch fails', async () => {
+    callCoreRpcMock.mockImplementation(async ({ method }: { method: string }) => {
+      if (method === 'openhuman.companion_status') throw new Error('rpc down');
+      if (method === 'openhuman.companion_config_get') return mockConfig;
+      throw new Error(`unmocked method: ${method}`);
+    });
+    renderWithProviders(<CompanionPanel />);
+    await waitFor(() => {
+      expect(screen.getByText('rpc down')).toBeInTheDocument();
+    });
+  });
+
+  it('stops an active session via companion_stop_session', async () => {
+    const activeStatus = {
+      ...mockStatus,
+      active: true,
+      state: 'listening' as const,
+      session_id: 'sess-active',
+    };
+    let currentStatus: typeof mockStatus | typeof activeStatus = activeStatus;
+    callCoreRpcMock.mockImplementation(async ({ method }: { method: string }) => {
+      if (method === 'openhuman.companion_status') return currentStatus;
+      if (method === 'openhuman.companion_config_get') return mockConfig;
+      if (method === 'openhuman.companion_stop_session') {
+        currentStatus = mockStatus;
+        return { stopped: true, reason: 'user_requested' };
+      }
+      throw new Error(`unmocked method: ${method}`);
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<CompanionPanel />);
+    await waitFor(() => {
+      expect(screen.getByText('Stop Session')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText('Stop Session'));
+
+    await waitFor(() => {
+      expect(callCoreRpcMock).toHaveBeenCalledWith(
+        expect.objectContaining({ method: 'openhuman.companion_stop_session' })
+      );
+    });
+  });
+
+  it('shows error when stop session fails', async () => {
+    const activeStatus = {
+      ...mockStatus,
+      active: true,
+      state: 'speaking' as const,
+      session_id: 'sess-active',
+    };
+    callCoreRpcMock.mockImplementation(async ({ method }: { method: string }) => {
+      if (method === 'openhuman.companion_status') return activeStatus;
+      if (method === 'openhuman.companion_config_get') return mockConfig;
+      if (method === 'openhuman.companion_stop_session') throw new Error('cannot stop');
+      throw new Error(`unmocked method: ${method}`);
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<CompanionPanel />);
+    await waitFor(() => {
+      expect(screen.getByText('Stop Session')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText('Stop Session'));
+
+    await waitFor(() => {
+      expect(screen.getByText('cannot stop')).toBeInTheDocument();
+    });
+  });
+
+  it('renders "Disabled" when capture_screen and include_app_context are false', async () => {
+    callCoreRpcMock.mockImplementation(async ({ method }: { method: string }) => {
+      if (method === 'openhuman.companion_status') return mockStatus;
+      if (method === 'openhuman.companion_config_get') {
+        return { ...mockConfig, capture_screen: false, include_app_context: false };
+      }
+      throw new Error(`unmocked method: ${method}`);
+    });
+    renderWithProviders(<CompanionPanel />);
+    await waitFor(() => {
+      expect(screen.getAllByText('Disabled').length).toBeGreaterThanOrEqual(2);
+    });
+  });
 });
