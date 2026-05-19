@@ -147,6 +147,7 @@ const hi4: TranslationMap = {
   'onboarding.contextGathering.title': 'कॉन्टेक्स्ट गैदरिंग',
   'openhuman.team_list_teams': 'टीम सूची टीमें',
   'overlay.ariaAttention': 'ध्यान संदेश',
+  'overlay.ariaCompanion': 'कंपैनियन सक्रिय',
   'overlay.ariaOrb': 'OpenHuman ओवरले',
   'overlay.ariaVoiceActive': 'वॉइस इनपुट एक्टिव',
   'overlay.orbTitle': 'मूव करने के लिए खींचें · पोज़िशन रीसेट के लिए डबल-क्लिक करें',
@@ -167,6 +168,9 @@ const hi4: TranslationMap = {
   'pages.settings.aiSection.description':
     'लैंग्वेज मॉडल प्रोवाइडर, लोकल Ollama और वॉइस (STT / TTS)।',
   'pages.settings.aiSection.title': 'AI',
+  'pages.settings.features.desktopCompanion': 'डेस्कटॉप कंपैनियन',
+  'pages.settings.features.desktopCompanionDesc':
+    'स्क्रीन जागरूकता के साथ वॉयस सहायक — सुनता है, देखता है, बोलता है, इशारा करता है',
   'pages.settings.features.messagingChannels': 'मैसेजिंग चैनल',
   'pages.settings.features.messagingChannelsDesc': 'मैसेजिंग चैनल विवरण',
   'pages.settings.features.notifications': 'नोटिफिकेशन',

@@ -111,17 +111,21 @@ export const { setCompanionState, setSessionActive, setConfig, setLastError, cle
   companionSlice.actions;
 
 // ── Selectors ────────────────────────────────────────────────────────
+// Selectors tolerate a missing `companion` slice so consumers (e.g. BottomTabBar)
+// don't crash inside test harnesses that mock the store without this slice.
 
-export const selectCompanionState = (state: { companion: CompanionSliceState }) =>
-  state.companion.state;
+type MaybeCompanionRoot = { companion?: CompanionSliceState };
 
-export const selectCompanionSessionActive = (state: { companion: CompanionSliceState }) =>
-  state.companion.sessionActive;
+export const selectCompanionState = (state: MaybeCompanionRoot) =>
+  state.companion?.state ?? initialState.state;
 
-export const selectCompanionConfig = (state: { companion: CompanionSliceState }) =>
-  state.companion.config;
+export const selectCompanionSessionActive = (state: MaybeCompanionRoot) =>
+  state.companion?.sessionActive ?? initialState.sessionActive;
 
-export const selectCompanionLastError = (state: { companion: CompanionSliceState }) =>
-  state.companion.lastError;
+export const selectCompanionConfig = (state: MaybeCompanionRoot) =>
+  state.companion?.config ?? initialState.config;
+
+export const selectCompanionLastError = (state: MaybeCompanionRoot) =>
+  state.companion?.lastError ?? initialState.lastError;
 
 export default companionSlice.reducer;

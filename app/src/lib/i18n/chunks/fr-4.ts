@@ -147,6 +147,7 @@ const fr4: TranslationMap = {
   'onboarding.contextGathering.title': 'Collecte de contexte',
   'openhuman.team_list_teams': 'Liste des équipes',
   'overlay.ariaAttention': "Message d'attention",
+  'overlay.ariaCompanion': 'Compagnon actif',
   'overlay.ariaOrb': 'Overlay OpenHuman',
   'overlay.ariaVoiceActive': 'Saisie vocale active',
   'overlay.orbTitle': 'Glisse pour déplacer · Double-clique pour réinitialiser la position',
@@ -168,6 +169,9 @@ const fr4: TranslationMap = {
   'pages.settings.aiSection.description':
     'Fournisseurs de modèles de langage, Ollama local et voix (STT / TTS).',
   'pages.settings.aiSection.title': 'IA',
+  'pages.settings.features.desktopCompanion': 'Compagnon de bureau',
+  'pages.settings.features.desktopCompanionDesc':
+    "Assistant vocal avec conscience de l'écran — écoute, voit, parle, pointe",
   'pages.settings.features.messagingChannels': 'Canaux de messagerie',
   'pages.settings.features.messagingChannelsDesc': 'Description des canaux de messagerie',
   'pages.settings.features.notifications': 'Notifications',

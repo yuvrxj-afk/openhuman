@@ -147,6 +147,7 @@ const ru4: TranslationMap = {
   'onboarding.contextGathering.title': 'Сбор контекста',
   'openhuman.team_list_teams': 'Список команд',
   'overlay.ariaAttention': 'Сообщение',
+  'overlay.ariaCompanion': 'Спутник активен',
   'overlay.ariaOrb': 'Оверлей OpenHuman',
   'overlay.ariaVoiceActive': 'Голосовой ввод активен',
   'overlay.orbTitle': 'Перетащи для перемещения · Двойной клик для сброса позиции',
@@ -167,6 +168,9 @@ const ru4: TranslationMap = {
   'pages.settings.ai.voiceDesc': 'Описание голоса',
   'pages.settings.aiSection.description': 'Языковые модели, локальный Ollama и голос (STT / TTS).',
   'pages.settings.aiSection.title': 'ИИ',
+  'pages.settings.features.desktopCompanion': 'Десктоп-спутник',
+  'pages.settings.features.desktopCompanionDesc':
+    'Голосовой ассистент с распознаванием экрана — слушает, видит, говорит, указывает',
   'pages.settings.features.messagingChannels': 'Каналы мессенджеров',
   'pages.settings.features.messagingChannelsDesc': 'Описание каналов сообщений',
   'pages.settings.features.notifications': 'Уведомления',

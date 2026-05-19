@@ -147,6 +147,7 @@ const it4: TranslationMap = {
   'onboarding.contextGathering.title': 'Raccolta del contesto',
   'openhuman.team_list_teams': 'Elenco team',
   'overlay.ariaAttention': 'Messaggio di attenzione',
+  'overlay.ariaCompanion': 'Companion attivo',
   'overlay.ariaOrb': 'Overlay OpenHuman',
   'overlay.ariaVoiceActive': 'Input vocale attivo',
   'overlay.orbTitle': 'Trascina per spostare · Doppio clic per ripristinare la posizione',
@@ -168,6 +169,9 @@ const it4: TranslationMap = {
   'pages.settings.aiSection.description':
     'Provider di modelli linguistici, Ollama locale e voce (STT / TTS).',
   'pages.settings.aiSection.title': 'AI',
+  'pages.settings.features.desktopCompanion': 'Companion Desktop',
+  'pages.settings.features.desktopCompanionDesc':
+    'Assistente vocale con consapevolezza dello schermo — ascolta, vede, parla, indica',
   'pages.settings.features.messagingChannels': 'Canali di messaggistica',
   'pages.settings.features.messagingChannelsDesc': 'Descrizione canali di messaggistica',
   'pages.settings.features.notifications': 'Notifiche',
