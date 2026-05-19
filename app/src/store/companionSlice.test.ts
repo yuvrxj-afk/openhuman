@@ -68,6 +68,16 @@ describe('companionSlice', () => {
     expect(state.sessionActive).toBe(false);
   });
 
+  it('setCompanionState clears stale lastError on recovery to non-error state', () => {
+    const withError: CompanionSliceState = { ...initialState, lastError: 'old failure' };
+    const state = companionReducer(
+      withError,
+      setCompanionState({ session_id: 'sess-1', state: 'listening', previous_state: 'error' })
+    );
+    expect(state.lastError).toBeNull();
+    expect(state.state).toBe('listening');
+  });
+
   it('setSessionActive sets active flag and sessionId', () => {
     const state = companionReducer(
       initialState,

@@ -20,9 +20,12 @@ export default function CompanionPointer({ targets, dismissMs = 2000 }: Companio
 
   useEffect(() => {
     if (targets.length === 0) return;
-    setVisible(true);
-    const timer = window.setTimeout(() => setVisible(false), dismissMs);
-    return () => window.clearTimeout(timer);
+    const showFrame = window.requestAnimationFrame(() => setVisible(true));
+    const dismissTimer = window.setTimeout(() => setVisible(false), dismissMs);
+    return () => {
+      window.cancelAnimationFrame(showFrame);
+      window.clearTimeout(dismissTimer);
+    };
   }, [targets, dismissMs]);
 
   if (!visible || targets.length === 0) return null;

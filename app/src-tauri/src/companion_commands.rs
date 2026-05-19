@@ -108,9 +108,11 @@ pub(crate) async fn unregister_companion_hotkey(app: AppHandle<AppRuntime>) -> R
     if guard.is_empty() {
         debug!("[companion] no shortcut registered — nothing to unregister");
     } else {
+        // Clear the in-memory registry only after every OS unregister succeeds.
+        // If we clear first and a later unregister fails, we leak a registered
+        // shortcut with no record to retry.
         let old = guard.clone();
-        guard.clear();
-        for shortcut in old {
+        for shortcut in &old {
             debug!("[companion] unregistering shortcut: {shortcut}");
             app.global_shortcut()
                 .unregister(shortcut.as_str())
@@ -120,6 +122,7 @@ pub(crate) async fn unregister_companion_hotkey(app: AppHandle<AppRuntime>) -> R
                 })?;
             info!("[companion] shortcut unregistered: {shortcut}");
         }
+        guard.clear();
     }
     Ok(())
 }

@@ -245,8 +245,8 @@ const Settings = () => {
     },
     {
       id: 'companion',
-      title: 'Desktop Companion',
-      description: 'Clicky-style voice assistant with screen awareness',
+      title: t('pages.settings.features.desktopCompanion'),
+      description: t('pages.settings.features.desktopCompanionDesc'),
       route: 'companion',
       icon: CompanionIcon,
     },

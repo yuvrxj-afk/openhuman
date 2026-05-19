@@ -686,7 +686,7 @@ export default function OverlayApp() {
                 : mode === 'attention'
                   ? t('overlay.ariaAttention')
                   : mode === 'companion'
-                    ? 'Companion active'
+                    ? t('overlay.ariaCompanion')
                     : t('overlay.ariaOrb')
             }
             onMouseDown={handleDragStart}

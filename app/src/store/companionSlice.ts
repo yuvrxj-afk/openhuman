@@ -78,8 +78,11 @@ const companionSlice = createSlice({
       state.state = event.state;
       state.sessionId = event.session_id;
       state.sessionActive = event.state !== 'idle' && event.state !== 'error';
-      if (event.state === 'error' && event.message) {
-        state.lastError = event.message;
+      if (event.state === 'error') {
+        if (event.message) state.lastError = event.message;
+      } else {
+        // Clear stale error once the session recovers to a healthy state.
+        state.lastError = null;
       }
     },
     setSessionActive(state, action: PayloadAction<{ active: boolean; sessionId: string | null }>) {
