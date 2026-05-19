@@ -95,20 +95,30 @@ interface CompanionStateChangedPayload {
   message?: string;
 }
 
-/** Convert companion state to a user-friendly label for the bubble. */
-export function companionStateLabel(state: string): string {
-  switch (state) {
-    case 'listening':
-      return '\u201CListening\u2026\u201D';
-    case 'thinking':
-      return '\u201CThinking\u2026\u201D';
-    case 'speaking':
-      return '\u201CSpeaking\u2026\u201D';
-    case 'pointing':
-      return '\u201CPointing\u2026\u201D';
-    default:
-      return `\u201C${state}\u201D`;
-  }
+/**
+ * Convert companion state to a localized, user-friendly bubble label.
+ *
+ * Takes the translate function as an argument (rather than calling `useT`
+ * directly) so the helper stays a pure function and is unit-testable
+ * without rendering a React tree. The default branch wraps the raw state
+ * string \u2014 it's a fallback for unknown states and not expected in practice.
+ */
+export function companionStateLabel(state: string, t: (key: string) => string): string {
+  const inner = (() => {
+    switch (state) {
+      case 'listening':
+        return t('overlay.companion.listening');
+      case 'thinking':
+        return t('overlay.companion.thinking');
+      case 'speaking':
+        return t('overlay.companion.speaking');
+      case 'pointing':
+        return t('overlay.companion.pointing');
+      default:
+        return state;
+    }
+  })();
+  return `\u201C${inner}\u201D`;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -310,9 +320,10 @@ export default function OverlayApp() {
       }
       if (state === 'error') {
         setMode('companion');
+        const trimmed = payload?.message?.trim();
         setBubble({
           id: `companion-error-${Date.now()}`,
-          text: payload?.message ? `"${payload.message}"` : '\u201CError\u201D',
+          text: trimmed ? `\u201C${trimmed}\u201D` : `\u201C${t('overlay.companion.error')}\u201D`,
           tone: 'neutral',
           compact: true,
         });
@@ -324,12 +335,12 @@ export default function OverlayApp() {
       setMode('companion');
       setBubble({
         id: `companion-${state}-${Date.now()}`,
-        text: companionStateLabel(state),
+        text: companionStateLabel(state, t),
         tone: state === 'speaking' ? 'success' : 'accent',
         compact: true,
       });
     },
-    [clearDismissTimer, scheduleDismiss]
+    [clearDismissTimer, scheduleDismiss, t]
   );
 
   // ── Socket.IO subscription lifecycle ───────────────────────────────────
