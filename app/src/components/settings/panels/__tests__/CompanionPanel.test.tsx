@@ -2,6 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { callCoreRpc } from '../../../../services/coreRpcClient';
 import { renderWithProviders } from '../../../../test/test-utils';
 import CompanionPanel from '../CompanionPanel';
 
@@ -14,10 +15,7 @@ vi.mock('../../hooks/useSettingsNavigation', () => ({
   }),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { callCoreRpc } = require('../../../../services/coreRpcClient') as {
-  callCoreRpc: ReturnType<typeof vi.fn>;
-};
+const callCoreRpcMock = callCoreRpc as unknown as ReturnType<typeof vi.fn>;
 
 const mockStatus = {
   active: false,
@@ -40,7 +38,7 @@ const mockConfig = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  callCoreRpc.mockImplementation(async ({ method }: { method: string }) => {
+  callCoreRpcMock.mockImplementation(async ({ method }: { method: string }) => {
     if (method === 'openhuman.companion_status') return mockStatus;
     if (method === 'openhuman.companion_config_get') return mockConfig;
     throw new Error(`unmocked method: ${method}`);
@@ -57,7 +55,7 @@ describe('CompanionPanel', () => {
   });
 
   it('renders active state when session is active', async () => {
-    callCoreRpc.mockImplementation(async ({ method }: { method: string }) => {
+    callCoreRpcMock.mockImplementation(async ({ method }: { method: string }) => {
       if (method === 'openhuman.companion_status')
         return {
           ...mockStatus,
@@ -85,7 +83,7 @@ describe('CompanionPanel', () => {
       expect(screen.getByText('Start Session')).toBeInTheDocument();
     });
 
-    callCoreRpc.mockImplementation(async ({ method }: { method: string }) => {
+    callCoreRpcMock.mockImplementation(async ({ method }: { method: string }) => {
       if (method === 'openhuman.companion_start_session')
         return { session_id: 'new-sess', state: 'idle', expires_at_ms: null };
       if (method === 'openhuman.companion_status') return mockStatus;
@@ -96,7 +94,7 @@ describe('CompanionPanel', () => {
     await user.click(screen.getByText('Start Session'));
 
     await waitFor(() => {
-      expect(callCoreRpc).toHaveBeenCalledWith(
+      expect(callCoreRpcMock).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'openhuman.companion_start_session' })
       );
     });
@@ -110,7 +108,7 @@ describe('CompanionPanel', () => {
       expect(screen.getByText('Start Session')).toBeInTheDocument();
     });
 
-    callCoreRpc.mockImplementation(async ({ method }: { method: string }) => {
+    callCoreRpcMock.mockImplementation(async ({ method }: { method: string }) => {
       if (method === 'openhuman.companion_start_session') throw new Error('consent required');
       if (method === 'openhuman.companion_status') return mockStatus;
       if (method === 'openhuman.companion_config_get') return mockConfig;
@@ -136,7 +134,7 @@ describe('CompanionPanel', () => {
   it('calls companion_status on mount', async () => {
     renderWithProviders(<CompanionPanel />);
     await waitFor(() => {
-      expect(callCoreRpc).toHaveBeenCalledWith(
+      expect(callCoreRpcMock).toHaveBeenCalledWith(
         expect.objectContaining({ method: 'openhuman.companion_status' })
       );
     });

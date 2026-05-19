@@ -11,8 +11,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 use crate::dictation_hotkeys;
-
-type AppRuntime = tauri::Wry;
+use crate::AppRuntime;
 
 /// Tracks registered companion hotkey strings for unregistration.
 pub(crate) struct CompanionHotkeyState(pub(crate) Mutex<Vec<String>>);
